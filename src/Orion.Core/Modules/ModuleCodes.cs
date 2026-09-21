@@ -11,6 +11,7 @@ public static class ModuleCodes
     public const string Cardapio = "ORI0000001";
     public const string Pedidos = "ORI0000002";
     public const string Mesas = "ORI0000003";
+    public const string Estoque = "ORI0000004";
 
     public static readonly string[] Raizes = [Raiz, RaizLegado];
 
@@ -20,6 +21,7 @@ public static class ModuleCodes
         RaizLegado,
         Cardapio,
         Pedidos,
-        Mesas
+        Mesas,
+        Estoque
     ];
 }

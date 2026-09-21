@@ -11,7 +11,10 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
-      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=${POSTGRES_DB:-base};Username=${DB_USERNAME:-postgres};Password=${DB_PASSWORD};Search Path=orion
+      - ConnectionStrings__Default=Host=${DB_HOST:-postgres};Port=${DB_PORT:-5432};Database=${POSTGRES_DB:-base};Username=${DB_USERNAME:-postgres};Password=${DB_PASSWORD};Search Path=orion
+      - Services__Core__BaseUrl=${SERVICES_CORE_BASE_URL:-http://core:8081}
+      - Services__Core__InternalToken=${GATEWAY_INTERNAL_TOKEN}
+      - Services__FiscalNfe__Provider=${FISCAL_NFE_PROVIDER:-none}
     restart: on-failure:5
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]

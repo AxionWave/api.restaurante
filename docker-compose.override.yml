@@ -1,0 +1,9 @@
+# Aplicado automaticamente pelo "docker compose up" (sem -f) quando este arquivo está ao lado
+# do docker-compose.yml. Só pra uso local: Development libera Swagger + CORS local, e publica
+# a porta pra acessar direto (sem passar pelo Gateway) em http://localhost:8091.
+services:
+  restaurante:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "127.0.0.1:8091:8080"

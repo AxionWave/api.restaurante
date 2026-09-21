@@ -6,7 +6,7 @@ COPY src/Orion.Core/Orion.Core.csproj src/Orion.Core/
 COPY src/Orion.Application/Orion.Application.csproj src/Orion.Application/
 COPY src/Orion.Infrastructure/Orion.Infrastructure.csproj src/Orion.Infrastructure/
 COPY src/Orion.API/Orion.API.csproj src/Orion.API/
-RUN dotnet restore
+RUN dotnet restore src/Orion.API/Orion.API.csproj
 COPY src ./src
 RUN dotnet publish src/Orion.API/Orion.API.csproj -c Release -o /app/publish --no-restore
 

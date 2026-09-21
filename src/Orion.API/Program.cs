@@ -1,6 +1,8 @@
 using System.Text;
 using Orion.Infrastructure;
+using Orion.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -10,6 +12,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
         o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -68,25 +71,28 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddCors(o =>
-{
-    o.AddPolicy("dev", p => p
-        .SetIsOriginAllowed(origin =>
-            origin.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
-            || origin.StartsWith("http://127.0.0.1", StringComparison.OrdinalIgnoreCase))
-        .AllowAnyHeader()
-        .AllowAnyMethod());
-});
-
 var app = builder.Build();
+
+// Aplica as migrations do schema orion quando há string de conexão configurada.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetService<OrionDbContext>();
+    if (db is not null)
+    {
+        db.Database.Migrate();
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors("dev");
 }
 
+// CORS é tratado centralmente pelo Gateway (spring.cloud.gateway.globalcors) — aplicar aqui também
+// duplica os headers Access-Control-Allow-* na resposta e o navegador rejeita como erro de rede.
+
+app.UseMiddleware<Orion.API.Erros.ErroEstoqueMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
