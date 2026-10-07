@@ -28,7 +28,9 @@ public sealed record SaldoCore(
     string UnidadeMedida,
     int? UnidadeId,
     decimal Quantidade,
-    decimal? CustoMedio);
+    decimal? CustoMedio,
+    decimal? EstoqueMinimo,
+    bool AbaixoMinimo);
 
 public sealed record UnidadeCore(int Id, string Nome, string? Codigo, string? Cidade, string? Estado);
 

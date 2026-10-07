@@ -58,7 +58,8 @@ public sealed class CoreEstoqueClient(HttpClient http) : ICoreEstoqueClient
         var dto = await http.GetFromJsonAsync<SaldoJson>(
             $"/api/internal/estoque/saldos/{produtoId}?unidadeId={unidadeId}", Json, ct);
         return new SaldoCore(dto!.ProdutoId ?? produtoId, dto.ProdutoCodigo ?? "", dto.ProdutoNome ?? "",
-            dto.UnidadeMedida ?? "UN", dto.UnidadeId, dto.Quantidade ?? 0m, dto.CustoMedio);
+            dto.UnidadeMedida ?? "UN", dto.UnidadeId, dto.Quantidade ?? 0m, dto.CustoMedio,
+            dto.EstoqueMinimo, dto.AbaixoMinimo);
     }
 
     public async Task<IReadOnlyList<SaldoCore>> ListarSaldosAsync(int empresaId, int? unidadeId, string? search, CancellationToken ct = default)
@@ -74,7 +75,8 @@ public sealed class CoreEstoqueClient(HttpClient http) : ICoreEstoqueClient
         }
         var page = await http.GetFromJsonAsync<SpringPage<SaldoJson>>(url, Json, ct);
         return page?.Content?.Select(dto => new SaldoCore(dto.ProdutoId ?? 0, dto.ProdutoCodigo ?? "", dto.ProdutoNome ?? "",
-            dto.UnidadeMedida ?? "UN", dto.UnidadeId, dto.Quantidade ?? 0m, dto.CustoMedio)).ToList() ?? [];
+            dto.UnidadeMedida ?? "UN", dto.UnidadeId, dto.Quantidade ?? 0m, dto.CustoMedio,
+            dto.EstoqueMinimo, dto.AbaixoMinimo)).ToList() ?? [];
     }
 
     public async Task<IReadOnlyList<MovimentacaoCore>> RegistrarEntradasLoteAsync(
@@ -120,7 +122,8 @@ public sealed class CoreEstoqueClient(HttpClient http) : ICoreEstoqueClient
     }
 
     private sealed record SaldoJson(int? ProdutoId, string? ProdutoCodigo, string? ProdutoNome,
-        string? UnidadeMedida, int? UnidadeId, decimal? Quantidade, decimal? CustoMedio);
+        string? UnidadeMedida, int? UnidadeId, decimal? Quantidade, decimal? CustoMedio,
+        decimal? EstoqueMinimo, bool AbaixoMinimo);
 
     private sealed record MovimentacaoJson(long? Id, int? ProdutoId, string? ProdutoCodigo, string? Tipo, string? Origem,
         decimal? Quantidade, decimal? QuantidadePosterior, decimal? CustoUnitario);
