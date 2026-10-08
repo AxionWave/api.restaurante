@@ -2,7 +2,9 @@ using Orion.Application.Abstractions;
 using Orion.Application.Estoque;
 using Orion.Application.Fiscal;
 using Orion.Infrastructure.Auth;
+using Orion.Application.Salao;
 using Orion.Infrastructure.Estoque;
+using Orion.Infrastructure.Salao;
 using Orion.Infrastructure.Integracao;
 using Orion.Infrastructure.Integracao.Fiscal;
 using Orion.Infrastructure.Persistence;
@@ -46,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<IFornecedorNfe, FornecedorNfeNaoConfigurado>();
 
         services.AddScoped<IEntradaEstoqueService, EntradaEstoqueService>();
+        services.AddScoped<ISalaoService, SalaoService>();
 
         return services;
     }

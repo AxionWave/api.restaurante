@@ -13,6 +13,13 @@ public sealed class OrionDbContext(DbContextOptions<OrionDbContext> options) : D
     public DbSet<EntradaEstoque> EntradasEstoque => Set<EntradaEstoque>();
     public DbSet<EntradaEstoqueItem> EntradasEstoqueItens => Set<EntradaEstoqueItem>();
     public DbSet<MapaCodigoBarras> MapaCodigoBarras => Set<MapaCodigoBarras>();
+    public DbSet<Ambiente> Ambientes => Set<Ambiente>();
+    public DbSet<Mesa> Mesas => Set<Mesa>();
+    public DbSet<CartaCategoria> CartaCategorias => Set<CartaCategoria>();
+    public DbSet<CartaItem> CartaItens => Set<CartaItem>();
+    public DbSet<Atendimento> Atendimentos => Set<Atendimento>();
+    public DbSet<AtendimentoLugar> AtendimentoLugares => Set<AtendimentoLugar>();
+    public DbSet<ComandaItem> ComandaItens => Set<ComandaItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

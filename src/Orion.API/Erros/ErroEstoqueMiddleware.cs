@@ -2,6 +2,7 @@ using System.Text.Json;
 using Orion.Application.Fiscal;
 using Orion.Infrastructure.Estoque;
 using Orion.Infrastructure.Integracao;
+using Orion.Infrastructure.Salao;
 
 namespace Orion.API.Erros;
 
@@ -17,6 +18,10 @@ public sealed class ErroEstoqueMiddleware(RequestDelegate next, ILogger<ErroEsto
         catch (EstoqueRegraException ex)
         {
             await Escrever(ctx, ex.Status, "regra_estoque", ex.Message);
+        }
+        catch (SalaoRegraException ex)
+        {
+            await Escrever(ctx, ex.Status, "regra_casa", ex.Message);
         }
         catch (NfeXmlInvalidoException ex)
         {

@@ -19,8 +19,9 @@ CROSS JOIN (VALUES
   ('Inicio Orion', 'Modulo raiz legado (ORI0000000)', 'ORI0000000', '/inicio', 0),
   ('Cardapio', 'Cardapio e itens', 'ORI0000001', '/cardapio', 1),
   ('Pedidos', 'Pedidos e comandas', 'ORI0000002', '/pedidos', 2),
-  ('Mesas', 'Mesas e salao do restaurante', 'ORI0000003', '/mesas', 3),
-  ('Estoque', 'Entradas e ajustes de estoque', 'ORI0000004', '/estoque', 4)
+  ('Mesas', 'Mesas e atendimento do restaurante', 'ORI0000003', '/mesas', 3),
+  ('Estoque', 'Entradas e ajustes de estoque', 'ORI0000004', '/estoque', 4),
+  ('Configuracoes', 'Ambientes, mesas e equipe da casa', 'ORI0000005', '/configuracoes', 5)
 ) AS v(nome, descricao, codigo, url, ordem)
 WHERE NOT EXISTS (SELECT 1 FROM core.modulos m WHERE m.codigo = v.codigo);
 
