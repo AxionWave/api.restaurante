@@ -29,7 +29,7 @@ jobs:
             set -e
             mkdir -p /opt/enterprise
             if [ ! -d /opt/enterprise/api.restaurante/.git ]; then
-              git clone -b production git@github.com:Enteprise-X/api.restaurante.git /opt/enterprise/api.restaurante
+              git clone -b production git@github.com:AxionWave/api.restaurante.git /opt/enterprise/api.restaurante
             fi
             cd /opt/enterprise/api.restaurante
             git fetch origin production
