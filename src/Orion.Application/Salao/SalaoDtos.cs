@@ -52,6 +52,8 @@ public sealed record ItemDto(
     string? MotivoCancelamento,
     string? CanceladoPorNome);
 
+public sealed record GrupoCobrancaDto(long Id, ModoGrupoCobranca Modo, IReadOnlyList<long> LugarIds);
+
 public sealed record AtendimentoDto(
     long Id,
     long MesaId,
@@ -67,6 +69,7 @@ public sealed record AtendimentoDto(
     IReadOnlyList<long> MesasIds,
     IReadOnlyList<LugarDto> Lugares,
     IReadOnlyList<ItemDto> Itens,
+    IReadOnlyList<GrupoCobrancaDto> Grupos,
     decimal Total,
     decimal CotaIgual);
 

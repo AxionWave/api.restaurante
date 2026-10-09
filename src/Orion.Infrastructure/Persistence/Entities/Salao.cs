@@ -62,6 +62,24 @@ public class Atendimento
     public long? AnfitriaoLugarId { get; set; }
     public List<AtendimentoLugar> Lugares { get; set; } = [];
     public List<ComandaItem> Itens { get; set; } = [];
+    public List<GrupoCobranca> Grupos { get; set; } = [];
+}
+
+public class GrupoCobranca
+{
+    public long Id { get; set; }
+    public long AtendimentoId { get; set; }
+    public Atendimento? Atendimento { get; set; }
+    public ModoGrupoCobranca Modo { get; set; } = ModoGrupoCobranca.Junto;
+    public List<GrupoCobrancaLugar> Lugares { get; set; } = [];
+}
+
+public class GrupoCobrancaLugar
+{
+    public long GrupoCobrancaId { get; set; }
+    public GrupoCobranca? Grupo { get; set; }
+    public long LugarId { get; set; }
+    public AtendimentoLugar? Lugar { get; set; }
 }
 
 public class AtendimentoLugar

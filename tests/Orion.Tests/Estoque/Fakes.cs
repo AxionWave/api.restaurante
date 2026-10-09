@@ -58,7 +58,17 @@ public sealed class FakeCoreEstoqueClient : ICoreEstoqueClient
     {
         var p = _produtos[produtoId];
         _saldos.TryGetValue(produtoId, out var q);
-        return Task.FromResult(new SaldoCore(produtoId, p.Codigo, p.Nome, p.UnidadeMedida, unidadeId, q, null));
+        return Task.FromResult(new SaldoCore(produtoId, p.Codigo, p.Nome, p.UnidadeMedida, unidadeId, q, null, p.EstoqueMinimo, false));
+    }
+
+    public Task<IReadOnlyList<SaldoCore>> ListarSaldosAsync(int empresaId, int? unidadeId, string? search, CancellationToken ct = default)
+    {
+        var lista = _produtos.Values.Select(p =>
+        {
+            _saldos.TryGetValue(p.Id, out var q);
+            return new SaldoCore(p.Id, p.Codigo, p.Nome, p.UnidadeMedida, unidadeId, q, null, p.EstoqueMinimo, false);
+        }).ToList();
+        return Task.FromResult<IReadOnlyList<SaldoCore>>(lista);
     }
 
     public Task<IReadOnlyList<MovimentacaoCore>> RegistrarEntradasLoteAsync(

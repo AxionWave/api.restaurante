@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Orion.Application.Salao;
 using Orion.Infrastructure.Persistence;
 using Orion.Infrastructure.Persistence.Entities;
@@ -210,7 +211,7 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
         if (mesa.AtendimentoAbertoId is not null)
             throw new SalaoRegraException("Esta mesa já tem uma visita aberta.", 409);
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await BeginTxAsync(ct);
         var atendimento = new Atendimento
         {
             EmpresaId = empresaId,
@@ -225,13 +226,11 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
         db.Atendimentos.Add(atendimento);
         await db.SaveChangesAsync(ct);
 
-        var claimed = await db.Mesas
-            .Where(m => m.Id == mesa.Id && m.AtendimentoAbertoId == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(m => m.AtendimentoAbertoId, atendimento.Id), ct);
+        var claimed = await ClaimMesaAsync(mesa.Id, atendimento.Id, ct);
         if (claimed == 0)
             throw new SalaoRegraException("Esta mesa já tem uma visita aberta.", 409);
 
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         db.ChangeTracker.Clear();
         return await ObterAtendimentoAsync(empresaId, atendimento.Id, ct);
     }
@@ -278,6 +277,7 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
         if (temItem)
             throw new SalaoRegraException("Transfira ou cancele os pratos deste lugar antes de removê-lo.");
         db.AtendimentoLugares.Remove(lugar);
+        await LimparGruposOrfaosAsync(atendimento.Id, ct);
         await db.SaveChangesAsync(ct);
         return await ObterAtendimentoAsync(empresaId, atendimento.Id, ct);
     }
@@ -313,16 +313,10 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
         if (req.Quantidade < 1) throw new SalaoRegraException("A quantidade precisa ser ao menos 1.");
         var prato = await db.CartaItens.FirstOrDefaultAsync(i => i.Id == req.CartaItemId && i.EmpresaId == empresaId && i.Ativo, ct)
             ?? throw new SalaoRegraException("Prato não encontrado na carta.", 404);
-        if (req.LugarId is long lugarId)
-        {
-            var lugar = atendimento.Lugares.FirstOrDefault(l => l.Id == lugarId)
-                ?? throw new SalaoRegraException("Lugar não encontrado nesta visita.", 404);
-            if (lugar.ContaFechada)
-                throw new SalaoRegraException("A conta deste lugar já foi fechada.");
-        }
+        var lugar = ExigirLugarNomeado(atendimento, req.LugarId);
         atendimento.Itens.Add(new ComandaItem
         {
-            LugarId = req.LugarId,
+            LugarId = lugar.Id,
             CartaItemId = prato.Id,
             Descricao = prato.Nome,
             PrecoUnitario = prato.Preco,
@@ -346,14 +340,8 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
         ExigirAberto(item.Atendimento!);
         if (item.Status == StatusItem.Cancelado)
             throw new SalaoRegraException("Item cancelado não muda de lugar.");
-        if (req.LugarId is long lugarId)
-        {
-            var lugar = item.Atendimento!.Lugares.FirstOrDefault(l => l.Id == lugarId)
-                ?? throw new SalaoRegraException("Lugar não encontrado nesta visita.", 404);
-            if (lugar.ContaFechada)
-                throw new SalaoRegraException("A conta deste lugar já foi fechada.");
-        }
-        item.LugarId = req.LugarId;
+        var lugar = ExigirLugarNomeado(item.Atendimento!, req.LugarId);
+        item.LugarId = lugar.Id;
         await db.SaveChangesAsync(ct);
         return await ObterAtendimentoAsync(empresaId, item.AtendimentoId, ct);
     }
@@ -406,9 +394,7 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
             ?? throw new SalaoRegraException("Mesa não encontrada.", 404);
         if (mesa.Situacao == SituacaoMesa.Bloqueada)
             throw new SalaoRegraException("Esta mesa está bloqueada.");
-        var claimed = await db.Mesas
-            .Where(m => m.Id == mesa.Id && m.AtendimentoAbertoId == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(m => m.AtendimentoAbertoId, atendimento.Id), ct);
+        var claimed = await ClaimMesaAsync(mesa.Id, atendimento.Id, ct);
         if (claimed == 0)
             throw new SalaoRegraException("Esta mesa já tem uma visita aberta.", 409);
         return await ObterAtendimentoAsync(empresaId, atendimentoId, ct);
@@ -424,14 +410,13 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
                 throw new SalaoRegraException("Escolha quem paga a mesa.");
             atendimento.AnfitriaoLugarId = lugarId;
         }
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await BeginTxAsync(ct);
         atendimento.ModoFechamento = req.Modo;
         atendimento.Status = StatusAtendimento.Fechada;
         atendimento.FechadoEm = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-        await db.Mesas.Where(m => m.AtendimentoAbertoId == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(m => m.AtendimentoAbertoId, (long?)null), ct);
-        await tx.CommitAsync(ct);
+        await LiberarMesasAsync(id, ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return Projetar(atendimento, []);
     }
 
@@ -440,6 +425,7 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
             .Include(a => a.Mesa).ThenInclude(m => m!.Ambiente)
             .Include(a => a.Lugares)
             .Include(a => a.Itens)
+            .Include(a => a.Grupos).ThenInclude(g => g.Lugares)
             .FirstOrDefaultAsync(a => a.Id == id && a.EmpresaId == empresaId, ct)
         ?? throw new SalaoRegraException("Visita não encontrada.", 404);
 
@@ -461,6 +447,9 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
                 i.PrecoUnitario * i.Quantidade, i.Observacao, i.Destino, i.Status,
                 i.LancadoPorUsuarioId, i.LancadoPorNome, i.LancadoEm, i.MotivoCancelamento, i.CanceladoPorNome))
             .ToList();
+        var grupos = (atendimento.Grupos ?? [])
+            .Select(g => new GrupoCobrancaDto(g.Id, g.Modo, g.Lugares.Select(l => l.LugarId).ToList()))
+            .ToList();
         return new AtendimentoDto(
             atendimento.Id,
             atendimento.MesaId,
@@ -476,8 +465,70 @@ public sealed class SalaoService(OrionDbContext db) : ISalaoService
             mesasIds,
             lugares,
             itens,
+            grupos,
             total,
             decimal.Round(total / pessoas, 2, MidpointRounding.AwayFromZero));
+    }
+
+    internal static AtendimentoLugar ExigirLugarNomeado(Atendimento atendimento, long? lugarId)
+    {
+        if (lugarId is not long id || id <= 0)
+            throw new SalaoRegraException("Escolha quem pediu.");
+        var lugar = atendimento.Lugares.FirstOrDefault(l => l.Id == id)
+            ?? throw new SalaoRegraException("Lugar não encontrado nesta visita.", 404);
+        if (lugar.ContaFechada)
+            throw new SalaoRegraException("A conta deste lugar já foi fechada.");
+        if (string.IsNullOrWhiteSpace(lugar.NomeCliente) || !lugar.Ocupado)
+            throw new SalaoRegraException("Dê um nome a este lugar antes de lançar.");
+        return lugar;
+    }
+
+    private async Task LimparGruposOrfaosAsync(long atendimentoId, CancellationToken ct)
+    {
+        var grupos = await db.GruposCobranca.Include(g => g.Lugares)
+            .Where(g => g.AtendimentoId == atendimentoId)
+            .ToListAsync(ct);
+        foreach (var grupo in grupos)
+        {
+            if (grupo.Lugares.Count == 0 || (grupo.Modo == ModoGrupoCobranca.Junto && grupo.Lugares.Count < 2))
+                db.GruposCobranca.Remove(grupo);
+        }
+    }
+
+    private async Task<int> ClaimMesaAsync(long mesaId, long atendimentoId, CancellationToken ct)
+    {
+        if (!db.Database.IsRelational())
+        {
+            var mesa = await db.Mesas.FirstAsync(m => m.Id == mesaId, ct);
+            if (mesa.AtendimentoAbertoId is not null) return 0;
+            mesa.AtendimentoAbertoId = atendimentoId;
+            await db.SaveChangesAsync(ct);
+            return 1;
+        }
+
+        return await db.Mesas
+            .Where(m => m.Id == mesaId && m.AtendimentoAbertoId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.AtendimentoAbertoId, atendimentoId), ct);
+    }
+
+    private async Task LiberarMesasAsync(long atendimentoId, CancellationToken ct)
+    {
+        if (!db.Database.IsRelational())
+        {
+            var mesas = await db.Mesas.Where(m => m.AtendimentoAbertoId == atendimentoId).ToListAsync(ct);
+            foreach (var mesa in mesas) mesa.AtendimentoAbertoId = null;
+            await db.SaveChangesAsync(ct);
+            return;
+        }
+
+        await db.Mesas.Where(m => m.AtendimentoAbertoId == atendimentoId)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.AtendimentoAbertoId, (long?)null), ct);
+    }
+
+    private async Task<IDbContextTransaction?> BeginTxAsync(CancellationToken ct)
+    {
+        if (!db.Database.IsRelational()) return null;
+        return await db.Database.BeginTransactionAsync(ct);
     }
 
     private static void ExigirAberto(Atendimento atendimento)

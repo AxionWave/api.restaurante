@@ -20,6 +20,8 @@ public sealed class OrionDbContext(DbContextOptions<OrionDbContext> options) : D
     public DbSet<Atendimento> Atendimentos => Set<Atendimento>();
     public DbSet<AtendimentoLugar> AtendimentoLugares => Set<AtendimentoLugar>();
     public DbSet<ComandaItem> ComandaItens => Set<ComandaItem>();
+    public DbSet<GrupoCobranca> GruposCobranca => Set<GrupoCobranca>();
+    public DbSet<GrupoCobrancaLugar> GrupoCobrancaLugares => Set<GrupoCobrancaLugar>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

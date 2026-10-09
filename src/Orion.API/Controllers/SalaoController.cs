@@ -11,7 +11,7 @@ namespace Orion.API.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/restaurante/casa")]
-public sealed class SalaoController(ISalaoService salao, ICurrentUserAccessor current) : ControllerBase
+public sealed class SalaoController(ISalaoService salao, IPedidoService pedidos, ICurrentUserAccessor current) : ControllerBase
 {
     [HttpGet("ambientes")]
     [RequireModulo(ModuleCodes.Configuracoes, ModuleCodes.Mesas)]
@@ -29,7 +29,7 @@ public sealed class SalaoController(ISalaoService salao, ICurrentUserAccessor cu
         => Ok(await salao.SalvarAmbienteAsync(Empresa(), id, req, ct));
 
     [HttpGet("mesas")]
-    [RequireModulo(ModuleCodes.Configuracoes, ModuleCodes.Mesas)]
+    [RequireModulo(ModuleCodes.Configuracoes, ModuleCodes.Mesas, ModuleCodes.Pedidos)]
     public async Task<IActionResult> Mesas(CancellationToken ct)
         => Ok(await salao.ListarMesasAsync(Empresa(), ct));
 
@@ -88,14 +88,29 @@ public sealed class SalaoController(ISalaoService salao, ICurrentUserAccessor cu
     public async Task<IActionResult> Obter(long id, CancellationToken ct)
         => Ok(await salao.ObterAtendimentoAsync(Empresa(), id, ct));
 
+    [HttpGet("mesas/{mesaId:long}/visita")]
+    [RequireModulo(ModuleCodes.Mesas, ModuleCodes.Pedidos)]
+    public async Task<IActionResult> VisitaDaMesa(long mesaId, CancellationToken ct)
+        => Ok(await pedidos.ObterVisitaDaMesaAsync(Empresa(), mesaId, ct));
+
     [HttpPost("mesas/{mesaId:long}/abrir")]
     [RequireModulo(ModuleCodes.Mesas, ModuleCodes.Pedidos)]
     public async Task<IActionResult> Abrir(long mesaId, CancellationToken ct)
         => StatusCode(201, await salao.AbrirAsync(Empresa(), mesaId, Usuario(), Nome(), ct));
 
+    [HttpGet("atendimentos/{id:long}/conta")]
+    [RequireModulo(ModuleCodes.Mesas, ModuleCodes.Pedidos)]
+    public async Task<IActionResult> RelatorioConta(long id, CancellationToken ct)
+        => Ok(await pedidos.ObterContaAsync(Empresa(), id, ct));
+
+    [HttpPut("atendimentos/{id:long}/grupos")]
+    [RequireModulo(ModuleCodes.Mesas, ModuleCodes.Pedidos)]
+    public async Task<IActionResult> Grupos(long id, [FromBody] DefinirGruposRequest req, CancellationToken ct)
+        => Ok(await pedidos.DefinirGruposAsync(Empresa(), id, req, ct));
+
     [HttpPost("atendimentos/{id:long}/conta")]
     [RequireModulo(ModuleCodes.Mesas, ModuleCodes.Pedidos)]
-    public async Task<IActionResult> Conta(long id, CancellationToken ct)
+    public async Task<IActionResult> PedirConta(long id, CancellationToken ct)
         => Ok(await salao.PedirContaAsync(Empresa(), id, ct));
 
     [HttpPost("atendimentos/{id:long}/reabrir")]
@@ -126,7 +141,7 @@ public sealed class SalaoController(ISalaoService salao, ICurrentUserAccessor cu
     [HttpPost("atendimentos/{id:long}/itens")]
     [RequireModulo(ModuleCodes.Mesas, ModuleCodes.Pedidos)]
     public async Task<IActionResult> Lancar(long id, [FromBody] LancarItemRequest req, CancellationToken ct)
-        => StatusCode(201, await salao.LancarItemAsync(Empresa(), id, Usuario(), Nome(), req, ct));
+        => StatusCode(201, await pedidos.LancarItemAsync(Empresa(), id, Usuario(), Nome(), req, ct));
 
     [HttpPost("itens/{id:long}/transferir")]
     [RequireModulo(ModuleCodes.Mesas, ModuleCodes.Pedidos)]

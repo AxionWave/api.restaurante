@@ -69,6 +69,30 @@ public sealed class AtendimentoConfig : IEntityTypeConfiguration<Atendimento>
         b.HasOne(x => x.Mesa).WithMany().HasForeignKey(x => x.MesaId).OnDelete(DeleteBehavior.Restrict);
         b.HasMany(x => x.Lugares).WithOne(x => x.Atendimento!).HasForeignKey(x => x.AtendimentoId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(x => x.Itens).WithOne(x => x.Atendimento!).HasForeignKey(x => x.AtendimentoId).OnDelete(DeleteBehavior.Cascade);
+        b.HasMany(x => x.Grupos).WithOne(x => x.Atendimento!).HasForeignKey(x => x.AtendimentoId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class GrupoCobrancaConfig : IEntityTypeConfiguration<GrupoCobranca>
+{
+    public void Configure(EntityTypeBuilder<GrupoCobranca> b)
+    {
+        b.ToTable("grupos_cobranca");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Modo).HasConversion<string>().HasMaxLength(20);
+        b.HasIndex(x => x.AtendimentoId);
+        b.HasMany(x => x.Lugares).WithOne(x => x.Grupo!).HasForeignKey(x => x.GrupoCobrancaId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class GrupoCobrancaLugarConfig : IEntityTypeConfiguration<GrupoCobrancaLugar>
+{
+    public void Configure(EntityTypeBuilder<GrupoCobrancaLugar> b)
+    {
+        b.ToTable("grupo_cobranca_lugares");
+        b.HasKey(x => new { x.GrupoCobrancaId, x.LugarId });
+        b.HasIndex(x => x.LugarId).IsUnique();
+        b.HasOne(x => x.Lugar).WithMany().HasForeignKey(x => x.LugarId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
